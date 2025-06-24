@@ -50,9 +50,9 @@ module axi_hdmi_tx_vdma (
   input                    vdma_end_of_frame,
   input                    vdma_valid,
   input       [ 63:0]      vdma_data,
-  output      [511:0]      vdma_and_waddr_s,
   output  reg              vdma_ready,
   output  reg              vdma_wr,
+  output  reg [  8:0]      vdma_waddr_b,
   output  reg [ 47:0]      vdma_wdata,
   output  reg              vdma_fs_ret_toggle,
   output  reg [511:0]      vdma_fs_waddr,
@@ -86,18 +86,48 @@ module axi_hdmi_tx_vdma (
 
   // internal wires
 
-  wire    [47:0]  vdma_tpm_data_s;
-  wire            vdma_tpm_oos_s;
-  wire            vdma_ovf_s;
-  wire            vdma_unf_s;
-  wire            almost_full_s;
-  wire            empty_s;
-  wire    [511:0] empty_and_s;
-  // wire    [511:0] vdma_and_waddr_s;
-  wire            ready_s;
+  wire    [ 47:0]  vdma_tpm_data_s;
+  wire             vdma_tpm_oos_s;
+  wire             vdma_ovf_s;
+  wire             vdma_unf_s;
+  wire             almost_full;
+  wire    [511:0]  vdma_waddr_oh_s;
 
-  // variables
-  integer         i;
+
+// one-hot to binary conversion
+
+function [8:0] oh2b;
+    input [511:0] oh;
+    reg   [  8:0] b;
+    reg  [255:0] oh_256;
+    reg  [127:0] oh_128;
+    reg  [ 63:0] oh_64;
+    reg  [ 31:0] oh_32;
+    reg  [ 15:0] oh_16;
+    reg  [  7:0] oh_8;
+    reg  [  3:0] oh_4;
+    reg  [  1:0] oh_2;
+    begin
+      b[8] = |oh[511:256];
+      oh_256 = (b[8]) ? oh[511:256] : oh[255:0];
+      b[7] = |oh_256[255:128];
+      oh_128 = (b[7]) ? oh_256[255:128] : oh_256[127:0];
+      b[6] = |oh_128[127:64];
+      oh_64  = (b[6]) ? oh_128[127:64] : oh_128[63:0];
+      b[5] = |oh_64[63:32];
+      oh_32  = (b[5]) ? oh_64[63:32] : oh_64[31:0];
+      b[4] = |oh_32[31:16];
+      oh_16  = (b[4]) ? oh_32[31:16] : oh_32[15:0];
+      b[3] = |oh_16[15:8];
+      oh_8   = (b[3]) ? oh_16[15:8] : oh_16[7:0];
+      b[2] = |oh_8[7:4];
+      oh_4 = (b[2]) ? oh_8[7:4] : oh_8[3:0];
+      b[1] = |oh_4[3:2];
+      oh_2 = (b[1]) ? oh_4[3:2] : oh_4[1:0];
+      b[0] = oh_2[1];
+      oh2b = b;
+    end
+  endfunction
 
   // hdmi frame sync
 
@@ -137,6 +167,14 @@ module axi_hdmi_tx_vdma (
         vdma_fs_ret_toggle <= ~vdma_fs_ret_toggle;
         vdma_fs_waddr <= vdma_waddr;
       end
+    end
+  end
+
+  always @(posedge vdma_clk) begin
+    if (vdma_rst == 1'b1) begin
+      vdma_waddr_b <= 9'd0;
+    end begin
+      vdma_waddr_b <= oh2b(vdma_waddr_oh_s);
     end
   end
 
@@ -191,13 +229,12 @@ module axi_hdmi_tx_vdma (
     end
   end
 
-  assign vdma_and_waddr_s = {vdma_waddr[511] & vdma_waddr[0],
-                           vdma_waddr[510:0] & vdma_waddr[511:1]};
-
+  assign vdma_waddr_oh_s = {vdma_waddr[511] & vdma_waddr[0],
+                            vdma_waddr[510:0] & vdma_waddr[511:1]};
   assign almost_full_s = |(vdma_waddr & vdma_raddr_m2);
   assign ready_s = ~almost_full_s & vdma_active_frame;
-  assign empty_and_s = {vdma_and_waddr_s[511:1] & ~vdma_raddr_m2[511:1] &
-                        vdma_raddr_m2[510:0], vdma_and_waddr_s[0] &
+  assign empty_and_s = {vdma_waddr_oh_s[511:1] & ~vdma_raddr_m2[511:1] &
+                        vdma_raddr_m2[510:0], vdma_waddr_oh_s[0] &
                         ~vdma_raddr_m2[0] & vdma_raddr_m2[511]};
   assign empty_s = |(empty_and_s);
 
@@ -235,7 +272,6 @@ module axi_hdmi_tx_vdma (
     vdma_ready <= ready_s;
     vdma_ovf <= vdma_ovf_s;
     vdma_unf <= vdma_unf_s;
-    // vdma_and_waddr <= vdma_and_waddr_s;
   end
 
 endmodule

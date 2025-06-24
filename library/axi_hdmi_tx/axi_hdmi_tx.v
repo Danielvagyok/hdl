@@ -159,7 +159,7 @@ module axi_hdmi_tx #(
   wire             hdmi_tpm_oos_s;
   wire             hdmi_status_s;
   wire             vdma_wr_s;
-  wire    [511:0]  vdma_and_waddr_s;
+  wire    [  8:0]  vdma_waddr_b_s;
   wire    [ 47:0]  vdma_wdata_s;
   wire             vdma_fs_ret_toggle_s;
   wire    [511:0]  vdma_fs_waddr_s;
@@ -256,7 +256,7 @@ module axi_hdmi_tx #(
     .vdma_ready (vdma_ready),
     .vdma_end_of_frame (vdma_end_of_frame),
     .vdma_wr (vdma_wr_s),
-    .vdma_and_waddr_s (vdma_and_waddr_s),
+    .vdma_waddr_b (vdma_waddr_b_s),
     .vdma_wdata (vdma_wdata_s),
     .vdma_fs_ret_toggle (vdma_fs_ret_toggle_s),
     .vdma_fs_waddr (vdma_fs_waddr_s),
@@ -297,7 +297,7 @@ module axi_hdmi_tx #(
     .hdmi_status (hdmi_status_s),
     .vdma_clk (vdma_clk),
     .vdma_wr (vdma_wr_s),
-    .vdma_and_waddr (vdma_and_waddr_s),
+    .vdma_waddr_b (vdma_waddr_b_s),
     .vdma_wdata (vdma_wdata_s),
     .vdma_fs_ret_toggle (vdma_fs_ret_toggle_s),
     .vdma_fs_waddr (vdma_fs_waddr_s),
