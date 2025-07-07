@@ -22,6 +22,7 @@ set_module_property ELABORATION_CALLBACK add_out_interface
 
 ad_ip_files axi_hdmi_tx [list \
   $ad_hdl_dir/library/common/ad_mem.v \
+  $ad_hdl_dir/library/common/fifo_mem1.v \
   $ad_hdl_dir/library/common/ad_rst.v \
   $ad_hdl_dir/library/common/ad_csc.v \
   $ad_hdl_dir/library/common/ad_csc_RGB2CrYCb.v \
