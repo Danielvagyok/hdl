@@ -22,6 +22,7 @@ set_module_property ELABORATION_CALLBACK add_out_interface
 
 ad_ip_files axi_hdmi_tx [list \
   $ad_hdl_dir/library/common/ad_mem.v \
+  $ad_hdl_dir/library/common/fifo_mem1.v \
   $ad_hdl_dir/library/common/ad_rst.v \
   $ad_hdl_dir/library/common/ad_csc.v \
   $ad_hdl_dir/library/common/ad_csc_RGB2CrYCb.v \
@@ -31,6 +32,7 @@ ad_ip_files axi_hdmi_tx [list \
   $ad_hdl_dir/library/common/up_xfer_status.v \
   $ad_hdl_dir/library/common/up_clock_mon.v \
   $ad_hdl_dir/library/common/up_hdmi_tx.v \
+  $ad_hdl_dir/library/common/prog_delay_sync.v \
   $ad_hdl_dir/library/intel/common/ad_mul.v \
   $ad_hdl_dir/library/intel/common/up_xfer_cntrl_constr.sdc \
   $ad_hdl_dir/library/intel/common/up_xfer_status_constr.sdc \
