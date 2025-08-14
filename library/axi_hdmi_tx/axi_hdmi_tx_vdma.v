@@ -40,75 +40,54 @@ module axi_hdmi_tx_vdma (
 
   // hdmi interface
 
-  input                   hdmi_fs_toggle,
-  input       [ 8:0]      hdmi_raddr_g,
+  input                    hdmi_fs_toggle,
+  input       [511:0]      hdmi_raddr,
 
   // vdma interface
 
-  input                   vdma_clk,
-  input                   vdma_rst,
-  input                   vdma_end_of_frame,
-  input                   vdma_valid,
-  input       [63:0]      vdma_data,
-  output  reg             vdma_ready,
-  output  reg             vdma_wr,
-  output  reg [ 8:0]      vdma_waddr,
-  output  reg [47:0]      vdma_wdata,
-  output  reg             vdma_fs_ret_toggle,
-  output  reg [ 8:0]      vdma_fs_waddr,
-  output  reg             vdma_tpm_oos,
-  output  reg             vdma_ovf,
-  output  reg             vdma_unf
+  input                    vdma_clk,
+  input                    vdma_rst,
+  input                    vdma_end_of_frame,
+  input                    vdma_valid,
+  input       [ 63:0]      vdma_data,
+  output  reg              vdma_ready,
+  output  reg              vdma_wr,
+  output  reg [511:0]      vdma_waddr,
+  output  reg [ 47:0]      vdma_wdata,
+  output  reg              vdma_fs_ret_toggle,
+  output  reg [511:0]      vdma_fs_waddr,
+  output  reg              vdma_tpm_oos,
+  output  reg              vdma_ovf,
+  output                   vdma_unf
 );
-
-  localparam      BUF_THRESHOLD_LO = 9'd3;
-  localparam      BUF_THRESHOLD_HI = 9'd509;
-  localparam      RDY_THRESHOLD_LO = 9'd450;
-  localparam      RDY_THRESHOLD_HI = 9'd500;
 
   // internal registers
 
-  reg             vdma_fs_toggle_m1 = 1'd0;
-  reg             vdma_fs_toggle_m2 = 1'd0;
-  reg             vdma_fs_toggle_m3 = 1'd0;
-  reg     [22:0]  vdma_tpm_data = 23'd0;
-  reg     [ 8:0]  vdma_raddr_g_m1 = 9'd0;
-  reg     [ 8:0]  vdma_raddr_g_m2 = 9'd0;
-  reg     [ 8:0]  vdma_raddr = 9'd0;
-  reg     [ 8:0]  vdma_addr_diff = 9'd0;
-  reg             vdma_almost_full = 1'd0;
-  reg             vdma_almost_empty = 1'd0;
-  reg             hdmi_fs = 1'd0;
-  reg             vdma_fs = 1'd0;
-  reg             vdma_end_of_frame_d = 1'd0;
-  reg             vdma_active_frame = 1'd0;
+  reg              vdma_fs_toggle_m1 = 1'd0;
+  reg              vdma_fs_toggle_m2 = 1'd0;
+  reg              vdma_fs_toggle_m3 = 1'd0;
+  reg     [ 22:0]  vdma_tpm_data = 23'd0;
+  reg              hdmi_fs = 1'd0;
+  reg              vdma_fs = 1'd0;
+  reg              vdma_end_of_frame_d = 1'd0;
+  reg              vdma_active_frame = 1'd0;
+  reg     [255:0]  search_half_full = 256'd0;
+  reg     [511:0]  vdma_status_reg = 512'd0;
 
   // internal wires
 
   wire    [47:0]  vdma_tpm_data_s;
   wire            vdma_tpm_oos_s;
-  wire    [ 9:0]  vdma_addr_diff_s;
   wire            vdma_ovf_s;
-  wire            vdma_unf_s;
+  wire            unf_s;
+  wire            vdma_half_full;
+  wire            vdma_delayed_half_full;
+  wire            vdma_full;
+  wire            vdma_empty_n_s;
 
-  // grey to binary conversion
-
-  function [8:0] g2b;
-    input [8:0] g;
-    reg   [8:0] b;
-    begin
-      b[8] = g[8];
-      b[7] = b[8] ^ g[7];
-      b[6] = b[7] ^ g[6];
-      b[5] = b[6] ^ g[5];
-      b[4] = b[5] ^ g[4];
-      b[3] = b[4] ^ g[3];
-      b[2] = b[3] ^ g[2];
-      b[1] = b[2] ^ g[1];
-      b[0] = b[1] ^ g[0];
-      g2b = b;
-    end
-  endfunction
+  // variables
+  integer         i;
+  genvar         gi;
 
   // hdmi frame sync
 
@@ -142,7 +121,7 @@ module axi_hdmi_tx_vdma (
   always @(posedge vdma_clk) begin
     if (vdma_rst == 1'b1) begin
       vdma_fs_ret_toggle = 1'b0;
-      vdma_fs_waddr <= 9'b0;
+      vdma_fs_waddr <= {511'd0, 1'b1}; 
     end else begin
       if (vdma_fs) begin
         vdma_fs_ret_toggle <= ~vdma_fs_ret_toggle;
@@ -170,11 +149,33 @@ module axi_hdmi_tx_vdma (
   always @(posedge vdma_clk) begin
     vdma_wr <= vdma_valid & vdma_ready;
     if (vdma_rst == 1'b1) begin
-      vdma_waddr <= 9'd0;
+      vdma_waddr <= {511'd0, 1'b1};
     end else if (vdma_wr == 1'b1) begin
       vdma_waddr <= vdma_waddr + 1'b1;
     end
     vdma_wdata <= {vdma_data[55:32], vdma_data[23:0]};
+  end
+
+  // status register
+
+  generate
+    for (gi = 1; gi < 512; gi = gi + 1) begin
+      always @(posedge vdma_clk or posedge hdmi_raddr[gi]) begin
+        if (hdmi_raddr[gi] || vdma_rst) begin
+          vdma_status_reg[gi] <= 1'b0;
+        end else if (vdma_wr == 1'b1) begin
+          vdma_status_reg[gi] <= vdma_status_reg[gi] | vdma_waddr[gi-1];
+        end  
+      end
+    end  
+  endgenerate  
+
+  always @(posedge vdma_clk or posedge hdmi_raddr[0]) begin
+    if (hdmi_raddr[0] || vdma_rst) begin
+      vdma_status_reg[0] <= 1'b0;
+    end else if (vdma_wr == 1'b1) begin
+      vdma_status_reg[0] <= vdma_status_reg[0] | vdma_waddr[511];
+    end  
   end
 
   // test error conditions
@@ -193,41 +194,46 @@ module axi_hdmi_tx_vdma (
   end
 
   // overflow or underflow status
+  // overflow cannot be detected
+  assign vdma_ovf_s = 1'b0;
+  assign unf_s = ~vdma_empty_n_s & vdma_wr;
+  assign vdma_empty_n_s = |(vdma_status_reg);
 
-  assign vdma_addr_diff_s = {1'b1, vdma_waddr} - vdma_raddr;
-  assign vdma_ovf_s = (vdma_addr_diff < BUF_THRESHOLD_LO) ? vdma_almost_full : 1'b0;
-  assign vdma_unf_s = (vdma_addr_diff > BUF_THRESHOLD_HI) ? vdma_almost_empty : 1'b0;
-
-  always @(posedge vdma_clk) begin
-    if (vdma_rst == 1'b1) begin
-      vdma_raddr_g_m1 <= 9'd0;
-      vdma_raddr_g_m2 <= 9'd0;
-    end else begin
-      vdma_raddr_g_m1 <= hdmi_raddr_g;
-      vdma_raddr_g_m2 <= vdma_raddr_g_m1;
+  always @(*) begin
+    for (i = 0; i < 256; i = i + 1) begin
+      search_half_full[i] = vdma_status_reg[i] & vdma_status_reg[i + 256];
     end
   end
+  assign vdma_half_full = |search_half_full;
+
+  prog_delay_sync #(
+    .DATA_WIDTH(1),
+    .ADDRESS_WIDTH(8) // maximum delay is 255 cycles
+  ) delay_full (
+    .clk(vdma_clk),
+    .rst(vdma_rst),
+    .ce(vdma_wr),
+    .l(8'd253), // delay 253 cycles
+    .din(vdma_half_full),
+    .dout(vdma_delayed_half_full)
+  );
+  assign vdma_full = (vdma_delayed_half_full & vdma_half_full);
+
+  prog_delay_sync #(
+    .DATA_WIDTH(1),
+    .ADDRESS_WIDTH(2) // maximum delay is 3 cycles
+  ) sync_unf (
+    .clk(vdma_clk),
+    .rst(vdma_rst),
+    .ce(1'b1),
+    .l(4'd2), // delay 2 cycles
+    .din(unf_s),
+    .dout(vdma_unf)
+  );
 
   always @(posedge vdma_clk) begin
-    vdma_raddr <= g2b(vdma_raddr_g_m2);
-    vdma_addr_diff <= vdma_addr_diff_s[8:0];
-    if (vdma_addr_diff >= RDY_THRESHOLD_HI) begin
-      vdma_ready <= 1'b0;
-    end else if (vdma_addr_diff <= RDY_THRESHOLD_LO) begin
-      vdma_ready <= vdma_active_frame;
-    end
-    if (vdma_addr_diff > BUF_THRESHOLD_HI) begin
-      vdma_almost_full <= 1'b1;
-    end else begin
-      vdma_almost_full <= 1'b0;
-    end
-    if (vdma_addr_diff < BUF_THRESHOLD_LO) begin
-      vdma_almost_empty <= 1'b1;
-    end else begin
-      vdma_almost_empty <= 1'b0;
-    end
+    vdma_ready <= ~(vdma_full) & vdma_active_frame;
     vdma_ovf <= vdma_ovf_s;
-    vdma_unf <= vdma_unf_s;
   end
 
 endmodule

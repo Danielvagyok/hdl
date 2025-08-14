@@ -80,10 +80,10 @@ module axi_hdmi_tx_core #(
 
   // control signals
 
-  output  reg             hdmi_fs_toggle,
-  output  reg [ 8:0]      hdmi_raddr_g,
-  output  reg             hdmi_tpm_oos,
-  output  reg             hdmi_status,
+  output  reg              hdmi_fs_toggle,
+  output  reg [511:0]      hdmi_raddr,
+  output  reg              hdmi_tpm_oos,
+  output  reg              hdmi_status,
 
   // vdma interface
 
@@ -116,106 +116,89 @@ module axi_hdmi_tx_core #(
 
   // internal registers
 
-  reg             hdmi_enable = 'd0;
-  reg     [15:0]  hdmi_hs_count = 'd0;
-  reg     [15:0]  hdmi_vs_count = 'd0;
-  reg             hdmi_fs = 'd0;
-  reg             hdmi_fs_ret_toggle_m1 = 'd0;
-  reg             hdmi_fs_ret_toggle_m2 = 'd0;
-  reg             hdmi_fs_ret_toggle_m3 = 'd0;
-  reg             hdmi_fs_ret = 'd0;
-  reg     [ 8:0]  hdmi_fs_waddr = 'd0;
-  reg             hdmi_hs = 'd0;
-  reg             hdmi_vs = 'd0;
-  reg             hdmi_hs_de = 'd0;
-  reg             hdmi_vs_de = 'd0;
-  reg     [ 9:0]  hdmi_raddr = 'd0;
-  reg             hdmi_hs_d = 'd0;
-  reg             hdmi_vs_d = 'd0;
-  reg             hdmi_hs_de_d = 'd0;
-  reg             hdmi_vs_de_d = 'd0;
-  reg             hdmi_de_d = 'd0;
-  reg             hdmi_data_sel_d = 'd0;
-  reg             hdmi_hs_2d = 'd0;
-  reg             hdmi_vs_2d = 'd0;
-  reg             hdmi_hs_de_2d = 'd0;
-  reg             hdmi_vs_de_2d = 'd0;
-  reg             hdmi_de_2d = 'd0;
-  reg             hdmi_data_sel_2d = 'd0;
-  reg     [47:0]  hdmi_data_2d = 'd0;
-  reg     [23:0]  hdmi_tpm_data = 'd0;
-  reg             hdmi_hsync = 'd0;
-  reg             hdmi_vsync = 'd0;
-  reg             hdmi_hsync_data_e = 'd0;
-  reg             hdmi_vsync_data_e = 'd0;
-  reg             hdmi_data_e = 'd0;
-  reg     [23:0]  hdmi_data = 'd0;
-  reg             hdmi_24_csc_hsync = 'd0;
-  reg             hdmi_24_csc_vsync = 'd0;
-  reg             hdmi_24_csc_hsync_data_e = 'd0;
-  reg             hdmi_24_csc_vsync_data_e = 'd0;
-  reg             hdmi_24_csc_data_e = 'd0;
-  reg     [23:0]  hdmi_24_csc_data = 'd0;
-  reg             hdmi_16_hsync_d = 'd0;
-  reg             hdmi_16_vsync_d = 'd0;
-  reg             hdmi_16_hsync_data_e_d = 'd0;
-  reg             hdmi_16_vsync_data_e_d = 'd0;
-  reg             hdmi_16_data_e_d = 'd0;
-  reg     [15:0]  hdmi_16_data_d = 'd0;
-  reg             hdmi_es_hs_de = 'd0;
-  reg             hdmi_es_vs_de = 'd0;
-  reg     [15:0]  hdmi_es_data = 'd0;
-  reg     [23:0]  hdmi_clip_data = 'd0;
-  reg             hdmi_clip_hs_de_d = 'd0;
-  reg             hdmi_clip_vs_de_d = 'd0;
-  reg             hdmi_clip_hs_d = 'd0;
-  reg             hdmi_clip_vs_d = 'd0;
-  reg             hdmi_clip_de_d = 'd0;
+  reg              hdmi_enable = 'd0;
+  reg     [ 15:0]  hdmi_hs_count = 'd0;
+  reg     [ 15:0]  hdmi_vs_count = 'd0;
+  reg              hdmi_fs = 'd0;
+  reg              hdmi_fs_ret_toggle_m1 = 'd0;
+  reg              hdmi_fs_ret_toggle_m2 = 'd0;
+  reg              hdmi_fs_ret_toggle_m3 = 'd0;
+  reg              hdmi_fs_ret = 'd0;
+  reg     [511:0]  hdmi_fs_waddr = 'd0;
+  reg     [511:0]  hdmi_waddr_m1 = 'd0;
+  reg     [511:0]  hdmi_waddr_m2 = 'd0;
+  reg              hdmi_hs = 'd0;
+  reg              hdmi_vs = 'd0;
+  reg              hdmi_hs_de = 'd0;
+  reg              hdmi_vs_de = 'd0;
+  reg              hdmi_data_sel = 'd0;
+  reg              hdmi_hs_d = 'd0;
+  reg              hdmi_vs_d = 'd0;
+  reg              hdmi_hs_de_d = 'd0;
+  reg              hdmi_vs_de_d = 'd0;
+  reg              hdmi_de_d = 'd0;
+  reg              hdmi_data_sel_d = 'd0;
+  reg              hdmi_hs_2d = 'd0;
+  reg              hdmi_vs_2d = 'd0;
+  reg              hdmi_hs_de_2d = 'd0;
+  reg              hdmi_vs_de_2d = 'd0;
+  reg              hdmi_de_2d = 'd0;
+  reg              hdmi_data_sel_2d = 'd0;
+  reg     [ 47:0]  hdmi_data_2d = 'd0;
+  reg     [ 23:0]  hdmi_tpm_data = 'd0;
+  reg              hdmi_hsync = 'd0;
+  reg              hdmi_vsync = 'd0;
+  reg              hdmi_hsync_data_e = 'd0;
+  reg              hdmi_vsync_data_e = 'd0;
+  reg              hdmi_data_e = 'd0;
+  reg     [ 23:0]  hdmi_data = 'd0;
+  reg              hdmi_24_csc_hsync = 'd0;
+  reg              hdmi_24_csc_vsync = 'd0;
+  reg              hdmi_24_csc_hsync_data_e = 'd0;
+  reg              hdmi_24_csc_vsync_data_e = 'd0;
+  reg              hdmi_24_csc_data_e = 'd0;
+  reg     [ 23:0]  hdmi_24_csc_data = 'd0;
+  reg              hdmi_16_hsync_d = 'd0;
+  reg              hdmi_16_vsync_d = 'd0;
+  reg              hdmi_16_hsync_data_e_d = 'd0;
+  reg              hdmi_16_vsync_data_e_d = 'd0;
+  reg              hdmi_16_data_e_d = 'd0;
+  reg     [ 15:0]  hdmi_16_data_d = 'd0;
+  reg              hdmi_es_hs_de = 'd0;
+  reg              hdmi_es_vs_de = 'd0;
+  reg     [ 15:0]  hdmi_es_data = 'd0;
+  reg     [ 23:0]  hdmi_clip_data = 'd0;
+  reg              hdmi_clip_hs_de_d = 'd0;
+  reg              hdmi_clip_vs_de_d = 'd0;
+  reg              hdmi_clip_hs_d = 'd0;
+  reg              hdmi_clip_vs_d = 'd0;
+  reg              hdmi_clip_de_d = 'd0;
 
   // internal wires
 
-  wire    [15:0]  hdmi_hl_width_s;
-  wire    [15:0]  hdmi_vf_width_s;
-  wire    [15:0]  hdmi_he_width_s;
-  wire    [15:0]  hdmi_ve_width_s;
-  wire            hdmi_fs_ret_s;
-  wire            hdmi_de_s;
-  wire    [47:0]  hdmi_rdata_s;
-  wire    [23:0]  hdmi_data_2d_s;
-  wire            hdmi_tpm_mismatch_s;
-  wire    [23:0]  hdmi_tpg_data_s;
-  wire            hdmi_csc_hsync_s;
-  wire            hdmi_csc_vsync_s;
-  wire            hdmi_csc_hsync_data_e_s;
-  wire            hdmi_csc_vsync_data_e_s;
-  wire            hdmi_csc_data_e_s;
-  wire    [23:0]  hdmi_csc_data_s;
-  wire            hdmi_ss_hsync_s;
-  wire            hdmi_ss_vsync_s;
-  wire            hdmi_ss_hsync_data_e_s;
-  wire            hdmi_ss_vsync_data_e_s;
-  wire            hdmi_ss_data_e_s;
-  wire    [15:0]  hdmi_ss_data_s;
-  wire    [15:0]  hdmi_es_data_s;
-
-  // binary to grey conversion
-
-  function [8:0] b2g;
-    input [8:0] b;
-    reg   [8:0] g;
-    begin
-      g[8] = b[8];
-      g[7] = b[8] ^ b[7];
-      g[6] = b[7] ^ b[6];
-      g[5] = b[6] ^ b[5];
-      g[4] = b[5] ^ b[4];
-      g[3] = b[4] ^ b[3];
-      g[2] = b[3] ^ b[2];
-      g[1] = b[2] ^ b[1];
-      g[0] = b[1] ^ b[0];
-      b2g = g;
-    end
-  endfunction
+  wire    [ 15:0]  hdmi_hl_width_s;
+  wire    [ 15:0]  hdmi_vf_width_s;
+  wire    [ 15:0]  hdmi_he_width_s;
+  wire    [ 15:0]  hdmi_ve_width_s;
+  wire             hdmi_fs_ret_s;
+  wire             hdmi_de_s;
+  wire    [ 47:0]  hdmi_rdata_s;
+  wire    [ 23:0]  hdmi_data_2d_s;
+  wire             hdmi_tpm_mismatch_s;
+  wire    [ 23:0]  hdmi_tpg_data_s;
+  wire             hdmi_csc_hsync_s;
+  wire             hdmi_csc_vsync_s;
+  wire             hdmi_csc_hsync_data_e_s;
+  wire             hdmi_csc_vsync_data_e_s;
+  wire             hdmi_csc_data_e_s;
+  wire    [ 23:0]  hdmi_csc_data_s;
+  wire             hdmi_ss_hsync_s;
+  wire             hdmi_ss_vsync_s;
+  wire             hdmi_ss_hsync_data_e_s;
+  wire             hdmi_ss_vsync_data_e_s;
+  wire             hdmi_ss_data_e_s;
+  wire    [ 15:0]  hdmi_ss_data_s;
+  wire    [ 15:0]  hdmi_es_data_s;
 
   // status and enable
 
@@ -345,11 +328,11 @@ module axi_hdmi_tx_core #(
 
   always @(posedge reference_clk) begin
     if (reference_rst == 1'b1) begin
-      hdmi_raddr <= 10'd0;
+      hdmi_raddr <= {511'd0, 1'b1};
     end else if (hdmi_fs == 1'b1) begin
-      hdmi_raddr <= {hdmi_fs_waddr, 1'b0};
-    end else if (hdmi_de_s == 1'b1) begin
-      hdmi_raddr <= hdmi_raddr + 1'b1;
+      hdmi_raddr <= hdmi_fs_waddr;
+    end else if (hdmi_data_sel && hdmi_de_s) begin
+      hdmi_raddr <= {hdmi_raddr[510:0], hdmi_raddr[511]};
     end
     hdmi_raddr_g <= b2g(hdmi_raddr[9:1]);
   end
@@ -362,7 +345,7 @@ module axi_hdmi_tx_core #(
     hdmi_hs_de_d <= hdmi_hs_de;
     hdmi_vs_de_d <= hdmi_vs_de;
     hdmi_de_d <= hdmi_de_s;
-    hdmi_data_sel_d <= hdmi_raddr[0];
+    hdmi_data_sel_d <= hdmi_data_sel;
     hdmi_hs_2d <= hdmi_hs_d;
     hdmi_vs_2d <= hdmi_vs_d;
     hdmi_hs_de_2d <= hdmi_hs_de_d;
@@ -528,8 +511,7 @@ module axi_hdmi_tx_core #(
   end
 
   // data memory
-
-  ad_mem #(
+  fifo_mem1 #(
     .DATA_WIDTH(48),
     .ADDRESS_WIDTH(9)
   ) i_mem (
@@ -539,7 +521,7 @@ module axi_hdmi_tx_core #(
     .dina (vdma_wdata),
     .clkb (reference_clk),
     .reb (1'b1),
-    .addrb (hdmi_raddr[9:1]),
+    .addrb (hdmi_raddr),
     .doutb (hdmi_rdata_s));
 
   // color space coversion, RGB to CrYCb

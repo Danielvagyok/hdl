@@ -130,42 +130,42 @@ module axi_hdmi_tx #(
 
   // internal signals
 
-  wire            up_wreq_s;
-  wire    [13:0]  up_waddr_s;
-  wire    [31:0]  up_wdata_s;
-  wire            up_wack_s;
-  wire            up_rreq_s;
-  wire    [13:0]  up_raddr_s;
-  wire    [31:0]  up_rdata_s;
-  wire            up_rack_s;
-  wire            hdmi_csc_bypass_s;
-  wire            hdmi_ss_bypass_s;
-  wire    [ 1:0]  hdmi_srcsel_s;
-  wire    [23:0]  hdmi_const_rgb_s;
-  wire    [15:0]  hdmi_hl_active_s;
-  wire    [15:0]  hdmi_hl_width_s;
-  wire    [15:0]  hdmi_hs_width_s;
-  wire    [15:0]  hdmi_he_max_s;
-  wire    [15:0]  hdmi_he_min_s;
-  wire    [15:0]  hdmi_vf_active_s;
-  wire    [15:0]  hdmi_vf_width_s;
-  wire    [15:0]  hdmi_vs_width_s;
-  wire    [15:0]  hdmi_ve_max_s;
-  wire    [15:0]  hdmi_ve_min_s;
-  wire    [23:0]  hdmi_clip_max_s;
-  wire    [23:0]  hdmi_clip_min_s;
-  wire            hdmi_fs_toggle_s;
-  wire    [ 8:0]  hdmi_raddr_g_s;
-  wire            hdmi_tpm_oos_s;
-  wire            hdmi_status_s;
-  wire            vdma_wr_s;
-  wire    [ 8:0]  vdma_waddr_s;
-  wire    [47:0]  vdma_wdata_s;
-  wire            vdma_fs_ret_toggle_s;
-  wire    [ 8:0]  vdma_fs_waddr_s;
-  wire            vdma_ovf_s;
-  wire            vdma_unf_s;
-  wire            vdma_tpm_oos_s;
+  wire             up_wreq_s;
+  wire    [ 13:0]  up_waddr_s;
+  wire    [ 31:0]  up_wdata_s;
+  wire             up_wack_s;
+  wire             up_rreq_s;
+  wire    [ 13:0]  up_raddr_s;
+  wire    [ 31:0]  up_rdata_s;
+  wire             up_rack_s;
+  wire             hdmi_csc_bypass_s;
+  wire             hdmi_ss_bypass_s;
+  wire    [  1:0]  hdmi_srcsel_s;
+  wire    [ 23:0]  hdmi_const_rgb_s;
+  wire    [ 15:0]  hdmi_hl_active_s;
+  wire    [ 15:0]  hdmi_hl_width_s;
+  wire    [ 15:0]  hdmi_hs_width_s;
+  wire    [ 15:0]  hdmi_he_max_s;
+  wire    [ 15:0]  hdmi_he_min_s;
+  wire    [ 15:0]  hdmi_vf_active_s;
+  wire    [ 15:0]  hdmi_vf_width_s;
+  wire    [ 15:0]  hdmi_vs_width_s;
+  wire    [ 15:0]  hdmi_ve_max_s;
+  wire    [ 15:0]  hdmi_ve_min_s;
+  wire    [ 23:0]  hdmi_clip_max_s;
+  wire    [ 23:0]  hdmi_clip_min_s;
+  wire             hdmi_fs_toggle_s;
+  wire    [511:0]  hdmi_raddr_s;
+  wire             hdmi_tpm_oos_s;
+  wire             hdmi_status_s;
+  wire             vdma_wr_s;
+  wire    [511:0]  vdma_waddr_s;
+  wire    [ 47:0]  vdma_wdata_s;
+  wire             vdma_fs_ret_toggle_s;
+  wire    [511:0]  vdma_fs_waddr_s;
+  wire             vdma_ovf_s;
+  wire             vdma_unf_s;
+  wire             vdma_tpm_oos_s;
 
   // signal name changes
 
@@ -248,13 +248,13 @@ module axi_hdmi_tx #(
 
   axi_hdmi_tx_vdma i_vdma (
     .hdmi_fs_toggle (hdmi_fs_toggle_s),
-    .hdmi_raddr_g (hdmi_raddr_g_s),
+    .hdmi_raddr (hdmi_raddr_s),
     .vdma_clk (vdma_clk),
     .vdma_rst (vdma_rst),
+    .vdma_end_of_frame (vdma_end_of_frame),
     .vdma_valid (vdma_valid),
     .vdma_data (vdma_data),
     .vdma_ready (vdma_ready),
-    .vdma_end_of_frame (vdma_end_of_frame),
     .vdma_wr (vdma_wr_s),
     .vdma_waddr (vdma_waddr_s),
     .vdma_wdata (vdma_wdata_s),
