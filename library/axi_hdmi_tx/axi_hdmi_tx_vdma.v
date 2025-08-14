@@ -52,7 +52,7 @@ module axi_hdmi_tx_vdma (
   input       [ 63:0]      vdma_data,
   output  reg              vdma_ready,
   output  reg              vdma_wr,
-  output  reg [  8:0]      vdma_waddr_b,
+  output   [  8:0]      vdma_waddr_b,
   output  reg [ 47:0]      vdma_wdata,
   output  reg              vdma_fs_ret_toggle,
   output  reg [511:0]      vdma_fs_waddr,
@@ -170,13 +170,12 @@ function [8:0] oh2b;
     end
   end
 
-  always @(posedge vdma_clk) begin
-    if (vdma_rst == 1'b1) begin
-      vdma_waddr_b <= 9'd0;
-    end begin
-      vdma_waddr_b <= oh2b(vdma_waddr_oh_s);
-    end
-  end
+  oh2b i_oh2b (
+    .clk (vdma_clk),
+    .rst (vdma_rst),
+    .oh (vdma_waddr_oh_s),
+    .b (vdma_waddr_b)
+  );
 
   // accept new frame from dma
 

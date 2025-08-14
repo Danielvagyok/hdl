@@ -142,7 +142,7 @@ module axi_hdmi_tx_core #(
   reg              hdmi_vs_de_2d = 'd0;
   reg              hdmi_de_2d = 'd0;
   reg              hdmi_data_sel_2d = 'd0;
-  // reg     [ 47:0]  hdmi_data_d = 'd0;
+  reg     [ 47:0]  hdmi_data_d = 'd0;
   reg     [ 47:0]  hdmi_data_2d = 'd0;
   reg     [ 23:0]  hdmi_tpm_data = 'd0;
   reg              hdmi_hsync = 'd0;
@@ -172,7 +172,6 @@ module axi_hdmi_tx_core #(
   reg              hdmi_clip_hs_d = 'd0;
   reg              hdmi_clip_vs_d = 'd0;
   reg              hdmi_clip_de_d = 'd0;
-  reg     [  8:0]  hdmi_raddr_b = 'd0;
 
   // internal wires
 
@@ -202,41 +201,11 @@ module axi_hdmi_tx_core #(
   wire    [511:0]  hdmi_raddr_oh_s;
   wire    [511:0]  hdmi_empty_and;
   wire             hdmi_empty_s;
-
-// one-hot to binary conversion
-
-function [8:0] oh2b;
-    input [511:0] oh;
-    reg   [  8:0] b;
-    reg  [255:0] oh_256;
-    reg  [127:0] oh_128;
-    reg  [ 63:0] oh_64;
-    reg  [ 31:0] oh_32;
-    reg  [ 15:0] oh_16;
-    reg  [  7:0] oh_8;
-    reg  [  3:0] oh_4;
-    reg  [  1:0] oh_2;
-    begin
-      b[8] = |oh[511:256];
-      oh_256 = (b[8]) ? oh[511:256] : oh[255:0];
-      b[7] = |oh_256[255:128];
-      oh_128 = (b[7]) ? oh_256[255:128] : oh_256[127:0];
-      b[6] = |oh_128[127:64];
-      oh_64  = (b[6]) ? oh_128[127:64] : oh_128[63:0];
-      b[5] = |oh_64[63:32];
-      oh_32  = (b[5]) ? oh_64[63:32] : oh_64[31:0];
-      b[4] = |oh_32[31:16];
-      oh_16  = (b[4]) ? oh_32[31:16] : oh_32[15:0];
-      b[3] = |oh_16[15:8];
-      oh_8   = (b[3]) ? oh_16[15:8] : oh_16[7:0];
-      b[2] = |oh_8[7:4];
-      oh_4 = (b[2]) ? oh_8[7:4] : oh_8[3:0];
-      b[1] = |oh_4[3:2];
-      oh_2 = (b[1]) ? oh_4[3:2] : oh_4[1:0];
-      b[0] = oh_2[1];
-      oh2b = b;
-    end
-  endfunction
+  wire    [  8:0]  hdmi_raddr_b_s;
+  
+  // variables
+  
+  genvar gi;
 
   // status and enable
 
@@ -321,17 +290,16 @@ function [8:0] oh2b;
       hdmi_fs_waddr <= vdma_fs_waddr;
   end
 
-  assign hdmi_raddr_oh_s = {hdmi_raddr[510:1] & hdmi_raddr[509:0],
-                            hdmi_raddr[0] & hdmi_raddr[511],
-                            hdmi_raddr[511] & hdmi_raddr[510]};
-
-  always @(posedge reference_clk) begin
-    if (reference_rst == 1'b1) begin
-      hdmi_raddr_b <= 9'd0;
-    end else begin
-      hdmi_raddr_b <= oh2b(hdmi_raddr_oh_s);
-    end
-  end
+ assign hdmi_raddr_oh_s = {hdmi_raddr[510:1] & hdmi_raddr[509:0],
+                           hdmi_raddr[0] & hdmi_raddr[511],
+                           hdmi_raddr[511] & hdmi_raddr[510]};
+                            
+  // convert one-hot to binary
+  oh2b i_oh2b (
+    .clk(reference_clk),
+    .rst(reference_rst),
+    .oh(hdmi_raddr_oh_s),
+    .b(hdmi_raddr_b_s));
 
   // hdmi sync signals
 
@@ -403,13 +371,14 @@ function [8:0] oh2b;
     hdmi_vs_de_d <= hdmi_vs_de;
     hdmi_de_d <= hdmi_de_s;
     hdmi_data_sel_d <= hdmi_data_sel;
+    hdmi_data_d <= hdmi_rdata_s;
     hdmi_hs_2d <= hdmi_hs_d;
     hdmi_vs_2d <= hdmi_vs_d;
     hdmi_hs_de_2d <= hdmi_hs_de_d;
     hdmi_vs_de_2d <= hdmi_vs_de_d;
     hdmi_de_2d <= hdmi_de_d;
     hdmi_data_sel_2d <= hdmi_data_sel_d;
-    hdmi_data_2d <= hdmi_rdata_s;
+    hdmi_data_2d <= hdmi_data_d;
   end
 
   // hdmi data count (may be used to monitor or insert)
@@ -578,7 +547,7 @@ function [8:0] oh2b;
     .dina (vdma_wdata),
     .clkb (reference_clk),
     .reb (1'b1),
-    .addrb (hdmi_raddr_b),
+    .addrb (hdmi_raddr_b_s),
     .doutb (hdmi_rdata_s));
 
   // color space coversion, RGB to CrYCb
